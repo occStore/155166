@@ -2,7 +2,6 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <!-- 手机自适应核心标签 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AI反诈小游戏</title>
     <style>
@@ -99,6 +98,71 @@
             box-shadow: 0 12px 24px rgba(46, 204, 113, 0.5);
         }
 
+        /* 模式选择弹窗 */
+        .mode-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+        .modal-box {
+            background: #fff;
+            width: 90%;
+            max-width: 480px;
+            padding: 40px 30px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+        .modal-box h2 {
+            color: #1a4d2e;
+            margin-bottom: 32px;
+            font-size: 26px;
+        }
+        .mode-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .mode-btn {
+            padding: 14px;
+            font-size: 20px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #fff;
+            transition: 0.3s;
+        }
+        .mode-btn:hover {
+            transform: translateY(-2px);
+        }
+        .img-mode {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+        }
+        .video-mode {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+        .audio-mode {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+        .close-modal {
+            margin-top: 24px;
+            padding: 10px 30px;
+            background: #95a5a6;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
         /* 手机适配 */
         @media (max-width: 768px) {
             h1 {
@@ -126,10 +190,17 @@
                 width: 36px;
                 height: 36px;
             }
+            .modal-box h2 {
+                font-size: 22px;
+            }
+            .mode-btn {
+                font-size: 18px;
+            }
         }
     </style>
 </head>
 <body>
+
     <div class="header">
         <img src="1.jpg" class="logo" alt="logo">
         <span class="brand">智岭先锋突击队</span>
@@ -138,9 +209,34 @@
     <div class="main">
         <h1>AI反诈小游戏</h1>
         <p class="subtitle">学会识别 AI 诈骗，守护财产安全</p>
-        <button class="start-btn" onclick="location.href='game.html'">开始游戏</button>
+        <button class="start-btn" onclick="openModeModal()">开始游戏</button>
     </div>
 
-    <img src="21.png" class="corner-img" alt="右下角装饰图">
+    <img src="21.png" class="corner-img" alt="右下角图片">
+
+    <!-- 模式选择弹窗 -->
+    <div class="mode-modal" id="modeModal">
+        <div class="modal-box">
+            <h2>请选择游戏模式</h2>
+            <div class="mode-list">
+                <button class="mode-btn img-mode" onclick="location.href='game.html'">图片识别模式</button>
+                <button class="mode-btn video-mode" onclick="location.href='video.html'">视频识别模式</button>
+                <button class="mode-btn audio-mode" onclick="location.href='audio.html'">音频识别模式</button>
+            </div>
+            <button class="close-modal" onclick="closeModeModal()">返回</button>
+        </div>
+    </div>
+
+<script>
+    const modal = document.getElementById('modeModal');
+    // 打开弹窗
+    function openModeModal() {
+        modal.style.display = 'flex';
+    }
+    // 关闭弹窗
+    function closeModeModal() {
+        modal.style.display = 'none';
+    }
+</script>
 </body>
 </html>

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <!-- 手机视频播放关键meta，禁止缩放、适配全屏 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI防诈 - 视频识别</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #eaffd0 0%, #d6f5ff 100%);
+            color: #2d5a27;
+            padding: 20px;
+        }
+
+        .back-btn {
+            padding: 12px 26px;
+            background: linear-gradient(135deg, #27ae60, #219653);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-bottom: 40px;
+            box-shadow: 0 6px 16px rgba(39, 174, 96, 0.3);
+            transition: 0.3s ease;
+        }
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(39, 174, 96, 0.4);
+        }
+
+        .game-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 40px;
+            margin-top: 40px;
+        }
+
+        .video-item {
+            text-align: center;
+            width: 300px;
+        }
+
+        .video-box {
+            width: 300px;
+            height: 300px;
+            border: 3px dashed #72c060;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #2d5a27;
+            margin-bottom: 20px;
+            background: #000000;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .video-box video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #000;
+        }
+
+        .choose-btn {
+            padding: 14px 30px;
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 18px;
+            cursor: pointer;
+            width: 100%;
+            box-shadow: 0 6px 16px rgba(46, 204, 113, 0.3);
+            transition: 0.3s ease;
+        }
+        .choose-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(46, 204, 113, 0.4);
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 36px;
+            border-radius: 16px;
+            text-align: center;
+            width: 90%;
+            max-width: 480px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .modal-media {
+            width: 100px;
+            height: 100px;
+            border: 2px dashed #72c060;
+            margin: 24px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #2d5a27;
+            border-radius: 8px;
+        }
+
+        .modal-btn {
+            margin: 10px;
+            padding: 11px 28px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.2s;
+        }
+        .modal-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .next-btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+        }
+        .home-btn {
+            background: linear-gradient(135deg, #7f8c8d, #636e70);
+            color: white;
+        }
+        .restart-btn {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+        }
+
+        /* 手机端适配 */
+        @media (max-width: 768px) {
+            .video-item {
+                width: 85vw;
+            }
+            .video-box {
+                width: 100%;
+                height: 60vw;
+            }
+            .game-container {
+                gap: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="back-btn" onclick="location.href='index.html'">← 返回主页</button>
+
+    <div class="game-container">
+        <div class="video-item">
+            <div id="vid1" class="video-box">暂无视频文件</div>
+            <button class="choose-btn" onclick="checkAnswer(1)">这是AI生成视频</button>
+        </div>
+        <div class="video-item">
+            <div id="vid2" class="video-box">暂无视频文件</div>
+            <button class="choose-btn" onclick="checkAnswer(2)">真实实拍视频</button>
+        </div>
+    </div>
+
+    <!-- 答对弹窗 -->
+    <div id="correctModal" class="modal">
+        <div class="modal-content">
+            <h2>✅ 恭喜你，回答正确！</h2>
+            <div class="modal-media"><img src="5.png" style="width:100%;height:100%;object-fit:cover;"></div>
+            <button class="modal-btn next-btn" onclick="nextQuestion()">下一题</button>
+        </div>
+    </div>
+
+    <!-- 答错弹窗 -->
+    <div id="wrongModal" class="modal">
+        <div class="modal-content">
+            <h2>❌ 回答错误，请再试试！</h2>
+            <div class="modal-media"><img src="6.png" style="width:100%;height:100%;object-fit:cover;"></div>
+            <button class="modal-btn next-btn" onclick="nextQuestion()">下一题</button>
+        </div>
+    </div>
+
+    <!-- 结算弹窗 -->
+    <div id="resultModal" class="modal">
+        <div class="modal-content">
+            <h2>📊 视频识别游戏结束</h2>
+            <h3 id="scoreText">总分：0分,正确：0题</h3>
+            <button class="modal-btn home-btn" onclick="location.href='index.html'">返回主页</button>
+            <button class="modal-btn restart-btn" onclick="restartGame()">重新开始</button>
+        </div>
+    </div>
+
+<script>
+    // ========== 视频素材数量配置（按你本地真实数量填写） ==========
+    const VIDEO_AI_COUNT = 5;
+    const VIDEO_REAL_COUNT = 5;
+    const VIDEO_SUFFIX = ".mp4";
+    const MAX_QUESTION = 3; // 一轮3题
+    // ============================================================
+
+    // 自动生成视频文件名数组
+    const aiVideoList = [];
+    const realVideoList = [];
+    for(let i = 1; i <= VIDEO_AI_COUNT; i++){
+        aiVideoList.push(i + VIDEO_SUFFIX);
+    }
+    for(let i = 1; i <= VIDEO_REAL_COUNT; i++){
+        realVideoList.push(i + VIDEO_SUFFIX);
+    }
+
+    let usedAiIdx = [];
+    let usedRealIdx = [];
+    let currentAns = 0;
+    let questionNum = 0;
+    let score = 0;
+
+    window.onload = renderVideo;
+
+    // 获取未使用随机下标（real只有1个时固定读取0号，避免404）
+    function getUnusedIndex(total, usedArr) {
+        if(total === 1) return 0;
+        let arr = [];
+        for(let i=0;i<total;i++) arr.push(i);
+        if(arr.every(item => usedArr.includes(item))){
+            usedArr.length = 0;
+        }
+        let filter = arr.filter(x => !usedArr.includes(x));
+        let rand = Math.floor(Math.random() * filter.length);
+        let res = filter[rand];
+        usedArr.push(res);
+        return res;
+    }
+
+    // 渲染一组对比视频，增加视频播放兼容属性
+    function renderVideo() {
+        questionNum++;
+        // 无素材兜底提示
+        if(aiVideoList.length === 0 || realVideoList.length === 0){
+            document.getElementById("vid1").innerText = "video/ai 文件夹缺少mp4视频";
+            document.getElementById("vid2").innerText = "video/noai 文件夹缺少mp4视频";
+            return;
+        }
+        let aiIdx = getUnusedIndex(aiVideoList.length, usedAiIdx);
+        let realIdx = getUnusedIndex(realVideoList.length, usedRealIdx);
+        let aiSrc = "video/ai/" + aiVideoList[aiIdx];
+        let realSrc = "video/noai/" + realVideoList[realIdx];
+
+        // 随机分配左右AI视频
+        let isLeftAi = Math.random() > 0.5;
+        if (isLeftAi) {
+            currentAns = 1;
+            document.getElementById("vid1").innerHTML = `
+                <video src="${aiSrc}" controls muted playsinline preload="auto"
+                style="width:100%;height:100%;object-fit:contain;background:#000;"
+                onerror="this.parentElement.innerText='视频文件缺失/编码不兼容'">
+                </video>`;
+            document.getElementById("vid2").innerHTML = `
+                <video src="${realSrc}" controls muted playsinline preload="auto"
+                style="width:100%;height:100%;object-fit:contain;background:#000;"
+                onerror="this.parentElement.innerText='视频文件缺失/编码不兼容'">
+                </video>`;
+        } else {
+            currentAns = 2;
+            document.getElementById("vid1").innerHTML = `
+                <video src="${realSrc}" controls muted playsinline preload="auto"
+                style="width:100%;height:100%;object-fit:contain;background:#000;"
+                onerror="this.parentElement.innerText='视频文件缺失/编码不兼容'">
+                </video>`;
+            document.getElementById("vid2").innerHTML = `
+                <video src="${aiSrc}" controls muted playsinline preload="auto"
+                style="width:100%;height:100%;object-fit:contain;background:#000;"
+                onerror="this.parentElement.innerText='视频文件缺失/编码不兼容'">
+                </video>`;
+        }
+    }
+
+    // 选择答案
+    function checkAnswer(select) {
+        if(select === currentAns){
+            score++;
+            document.getElementById("correctModal").style.display = "flex";
+        }else{
+            document.getElementById("wrongModal").style.display = "flex";
+        }
+    }
+
+    // 下一题，3题结束游戏
+    function nextQuestion() {
+        document.querySelectorAll(".modal").forEach(m => m.style.display = "none");
+        if(questionNum >= MAX_QUESTION){
+            document.getElementById("scoreText").innerText = `一共${MAX_QUESTION}题，答对${score}题，得${score}分`;
+            document.getElementById("resultModal").style.display = "flex";
+            return;
+        }
+        renderVideo();
+    }
+
+    // 重新开局
+    function restartGame() {
+        questionNum = 0;
+        score = 0;
+        usedAiIdx = [];
+        usedRealIdx = [];
+        document.querySelectorAll(".modal").forEach(m => m.style.display = "none");
+        renderVideo();
+    }
+</script>
+</body>
+</html>
