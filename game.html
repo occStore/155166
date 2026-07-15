@@ -61,6 +61,10 @@
             margin-bottom: 20px;
             background: #ffffff;
             border-radius: 12px;
+            overflow: hidden;
+            /* 硬件加速，优化渲染卡顿 */
+            transform: translateZ(0);
+            will-change: contents;
         }
 
         .choose-btn {
@@ -196,7 +200,7 @@
     </div>
 
 <script>
-    // ========== 图片数量配置，根据你文件夹实际数量修改 ==========
+    // ========== 图片数量配置 ==========
     const AI_COUNT = 20;
     const AI_SUFFIX = ".png";
     const NOAI_COUNT = 20;
@@ -204,7 +208,7 @@
     const MAX_QUESTION = 5; // 一轮5题
     // ==========================================================
 
-    // 自动生成图片数组，无需后端读取文件夹
+    // 自动生成图片数组
     const aiImages = [];
     const realImages = [];
     for(let i = 1; i <= AI_COUNT; i++){
@@ -214,6 +218,9 @@
         realImages.push(i + NOAI_SUFFIX);
     }
 
+    // 图片全局缓存，加载过的图片不再重复请求，解决切换卡顿
+    const imageCache = {};
+
     let usedAIIndices = [];
     let usedRealIndices = [];
     let currentAnswer = 0;
@@ -222,40 +229,61 @@
 
     window.onload = generateQuestion;
 
+    // 获取未使用随机下标
     function getUnusedIndex(totalCount, usedIndices) {
-        let available = [];
-        for (let i = 0; i < totalCount; i++) {
-            if (!usedIndices.includes(i)) available.push(i);
-        }
-        if (available.length === 0) {
+        let allIndex = Array.from({length: totalCount}, (_, i) => i);
+        const unusedList = allIndex.filter(x => !usedIndices.includes(x));
+        // 全部用完清空复用
+        if(unusedList.length === 0) {
             usedIndices.length = 0;
-            available = Array.from({length: totalCount}, (_, i) => i);
+            return Math.floor(Math.random() * totalCount);
         }
-        const randomIndex = Math.floor(Math.random() * available.length);
-        const selected = available[randomIndex];
-        usedIndices.push(selected);
-        return selected;
+        const randomIdx = Math.floor(Math.random() * unusedList.length);
+        const selectIdx = unusedList[randomIdx];
+        usedIndices.push(selectIdx);
+        return selectIdx;
     }
 
+    // 缓存图片工具函数
+    function getCacheImgHtml(src) {
+        // 已缓存直接返回
+        if(imageCache[src]) {
+            return `<img src="${src}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerText='图片缺失'">`;
+        }
+        // 预加载存入缓存
+        const tempImg = new Image();
+        tempImg.src = src;
+        imageCache[src] = true;
+        return `<img src="${src}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerText='图片缺失'">`;
+    }
+
+    // 渲染一组图片
     function generateQuestion() {
         questionCount++;
+        // 无素材兜底提示
+        if(aiImages.length === 0 || realImages.length === 0){
+            document.getElementById("img1").innerText = "ai文件夹缺少图片文件";
+            document.getElementById("img2").innerText = "noai文件夹缺少图片文件";
+            return;
+        }
         const aiIndex = getUnusedIndex(aiImages.length, usedAIIndices);
         const realIndex = getUnusedIndex(realImages.length, usedRealIndices);
-        const aiPic = "ai/" + aiImages[aiIndex];
-        const realPic = "noai/" + realImages[realIndex];
+        const aiSrc = "ai/" + aiImages[aiIndex];
+        const realSrc = "noai/" + realImages[realIndex];
 
         const isLeftAI = Math.random() > 0.5;
         if (isLeftAI) {
             currentAnswer = 1;
-            document.getElementById("img1").innerHTML = `<img src="${aiPic}" style="width:100%;height:100%;object-fit:cover;">`;
-            document.getElementById("img2").innerHTML = `<img src="${realPic}" style="width:100%;height:100%;object-fit:cover;">`;
+            document.getElementById("img1").innerHTML = getCacheImgHtml(aiSrc);
+            document.getElementById("img2").innerHTML = getCacheImgHtml(realSrc);
         } else {
             currentAnswer = 2;
-            document.getElementById("img1").innerHTML = `<img src="${realPic}" style="width:100%;height:100%;object-fit:cover;">`;
-            document.getElementById("img2").innerHTML = `<img src="${aiPic}" style="width:100%;height:100%;object-fit:cover;">`;
+            document.getElementById("img1").innerHTML = getCacheImgHtml(realSrc);
+            document.getElementById("img2").innerHTML = getCacheImgHtml(aiSrc);
         }
     }
 
+    // 选择答案
     function checkAnswer(choose) {
         if (choose === currentAnswer) {
             score++;
@@ -265,6 +293,7 @@
         }
     }
 
+    // 下一题
     function nextQuestion() {
         document.querySelectorAll(".modal").forEach(m => m.style.display = "none");
         if (questionCount >= MAX_QUESTION) {
@@ -275,6 +304,7 @@
         generateQuestion();
     }
 
+    // 重新开局
     function restartGame() {
         questionCount = 0;
         score = 0;

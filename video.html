@@ -2,7 +2,6 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <!-- 手机视频播放关键meta，禁止缩放、适配全屏 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AI防诈 - 视频识别</title>
     <style>
@@ -149,7 +148,6 @@
             color: white;
         }
 
-        /* 手机端适配 */
         @media (max-width: 768px) {
             .video-item {
                 width: 85vw;
@@ -170,15 +168,14 @@
     <div class="game-container">
         <div class="video-item">
             <div id="vid1" class="video-box">暂无视频文件</div>
-            <button class="choose-btn" onclick="checkAnswer(1)">这是AI生成视频</button>
+            <button class="choose-btn" onclick="checkAnswer(1)">视频一是AI视频</button>
         </div>
         <div class="video-item">
             <div id="vid2" class="video-box">暂无视频文件</div>
-            <button class="choose-btn" onclick="checkAnswer(2)">真实实拍视频</button>
+            <button class="choose-btn" onclick="checkAnswer(2)">视频二是AI视频</button>
         </div>
     </div>
 
-    <!-- 答对弹窗 -->
     <div id="correctModal" class="modal">
         <div class="modal-content">
             <h2>✅ 恭喜你，回答正确！</h2>
@@ -187,7 +184,6 @@
         </div>
     </div>
 
-    <!-- 答错弹窗 -->
     <div id="wrongModal" class="modal">
         <div class="modal-content">
             <h2>❌ 回答错误，请再试试！</h2>
@@ -196,64 +192,51 @@
         </div>
     </div>
 
-    <!-- 结算弹窗 -->
     <div id="resultModal" class="modal">
         <div class="modal-content">
             <h2>📊 视频识别游戏结束</h2>
-            <h3 id="scoreText">总分：0分,正确：0题</h3>
+            <h3 id="scoreText">一共3题，答对0题，得0分</h3>
             <button class="modal-btn home-btn" onclick="location.href='index.html'">返回主页</button>
             <button class="modal-btn restart-btn" onclick="restartGame()">重新开始</button>
         </div>
     </div>
 
 <script>
-    // ========== 视频素材数量配置（按你本地真实数量填写） ==========
+    // 视频素材配置
     const VIDEO_AI_COUNT = 5;
     const VIDEO_REAL_COUNT = 5;
     const VIDEO_SUFFIX = ".mp4";
-    const MAX_QUESTION = 3; // 一轮3题
-    // ============================================================
+    const MAX_QUESTION = 3;
 
-    // 自动生成视频文件名数组
     const aiVideoList = [];
     const realVideoList = [];
-    for(let i = 1; i <= VIDEO_AI_COUNT; i++){
-        aiVideoList.push(i + VIDEO_SUFFIX);
-    }
-    for(let i = 1; i <= VIDEO_REAL_COUNT; i++){
-        realVideoList.push(i + VIDEO_SUFFIX);
-    }
+    for(let i = 1; i <= VIDEO_AI_COUNT; i++) aiVideoList.push(i + VIDEO_SUFFIX);
+    for(let i = 1; i <= VIDEO_REAL_COUNT; i++) realVideoList.push(i + VIDEO_SUFFIX);
 
     let usedAiIdx = [];
     let usedRealIdx = [];
-    let currentAns = 0;
+    let targetIsLeftAI = false; // true=左边AI，正确选项1；false=右边AI，正确选项2
     let questionNum = 0;
     let score = 0;
 
     window.onload = renderVideo;
 
-    // 获取未使用随机下标（real只有1个时固定读取0号，避免404）
     function getUnusedIndex(total, usedArr) {
         if(total === 1) return 0;
-        let arr = [];
-        for(let i=0;i<total;i++) arr.push(i);
-        if(arr.every(item => usedArr.includes(item))){
-            usedArr.length = 0;
-        }
-        let filter = arr.filter(x => !usedArr.includes(x));
-        let rand = Math.floor(Math.random() * filter.length);
-        let res = filter[rand];
+        let arr = Array.from({length:total}, (_,i)=>i);
+        if(arr.every(x=>usedArr.includes(x))) usedArr.length = 0;
+        let unused = arr.filter(x=>!usedArr.includes(x));
+        let r = Math.floor(Math.random() * unused.length);
+        let res = unused[r];
         usedArr.push(res);
         return res;
     }
 
-    // 渲染一组对比视频，增加视频播放兼容属性
     function renderVideo() {
         questionNum++;
-        // 无素材兜底提示
         if(aiVideoList.length === 0 || realVideoList.length === 0){
-            document.getElementById("vid1").innerText = "video/ai 文件夹缺少mp4视频";
-            document.getElementById("vid2").innerText = "video/noai 文件夹缺少mp4视频";
+            document.getElementById("vid1").innerText = "video/ai 缺少视频";
+            document.getElementById("vid2").innerText = "video/noai 缺少视频";
             return;
         }
         let aiIdx = getUnusedIndex(aiVideoList.length, usedAiIdx);
@@ -261,38 +244,23 @@
         let aiSrc = "video/ai/" + aiVideoList[aiIdx];
         let realSrc = "video/noai/" + realVideoList[realIdx];
 
-        // 随机分配左右AI视频
-        let isLeftAi = Math.random() > 0.5;
-        if (isLeftAi) {
-            currentAns = 1;
-            document.getElementById("vid1").innerHTML = `
-                <video src="${aiSrc}" controls muted playsinline preload="auto"
-                style="width:100%;height:100%;object-fit:contain;background:#000;"
-                onerror="this.parentElement.innerText='视频文件缺失/编码不兼容'">
-                </video>`;
-            document.getElementById("vid2").innerHTML = `
-                <video src="${realSrc}" controls muted playsinline preload="auto"
-                style="width:100%;height:100%;object-fit:contain;background:#000;"
-                onerror="this.parentElement.innerText='视频文件缺失/编码不兼容'">
-                </video>`;
-        } else {
-            currentAns = 2;
-            document.getElementById("vid1").innerHTML = `
-                <video src="${realSrc}" controls muted playsinline preload="auto"
-                style="width:100%;height:100%;object-fit:contain;background:#000;"
-                onerror="this.parentElement.innerText='视频文件缺失/编码不兼容'">
-                </video>`;
-            document.getElementById("vid2").innerHTML = `
-                <video src="${aiSrc}" controls muted playsinline preload="auto"
-                style="width:100%;height:100%;object-fit:contain;background:#000;"
-                onerror="this.parentElement.innerText='视频文件缺失/编码不兼容'">
-                </video>`;
+        // 随机决定AI在左边还是右边
+        targetIsLeftAI = Math.random() > 0.5;
+        if(targetIsLeftAI){
+            // 左AI，右真实
+            document.getElementById("vid1").innerHTML = `<video src="${aiSrc}" controls muted playsinline preload="auto" style="width:100%;height:100%;object-fit:contain;background:#000;" onerror="this.parentElement.innerText='视频缺失'"></video>`;
+            document.getElementById("vid2").innerHTML = `<video src="${realSrc}" controls muted playsinline preload="auto" style="width:100%;height:100%;object-fit:contain;background:#000;" onerror="this.parentElement.innerText='视频缺失'"></video>`;
+        }else{
+            // 左真实，右AI
+            document.getElementById("vid1").innerHTML = `<video src="${realSrc}" controls muted playsinline preload="auto" style="width:100%;height:100%;object-fit:contain;background:#000;" onerror="this.parentElement.innerText='视频缺失'"></video>`;
+            document.getElementById("vid2").innerHTML = `<video src="${aiSrc}" controls muted playsinline preload="auto" style="width:100%;height:100%;object-fit:contain;background:#000;" onerror="this.parentElement.innerText='视频缺失'"></video>`;
         }
     }
 
-    // 选择答案
-    function checkAnswer(select) {
-        if(select === currentAns){
+    // 判断答案：1=视频一是AI；2=视频二是AI
+    function checkAnswer(sel) {
+        let correct = targetIsLeftAI ? 1 : 2;
+        if(sel === correct){
             score++;
             document.getElementById("correctModal").style.display = "flex";
         }else{
@@ -300,9 +268,8 @@
         }
     }
 
-    // 下一题，3题结束游戏
     function nextQuestion() {
-        document.querySelectorAll(".modal").forEach(m => m.style.display = "none");
+        document.querySelectorAll(".modal").forEach(m=>m.style.display="none");
         if(questionNum >= MAX_QUESTION){
             document.getElementById("scoreText").innerText = `一共${MAX_QUESTION}题，答对${score}题，得${score}分`;
             document.getElementById("resultModal").style.display = "flex";
@@ -311,13 +278,12 @@
         renderVideo();
     }
 
-    // 重新开局
     function restartGame() {
         questionNum = 0;
         score = 0;
         usedAiIdx = [];
         usedRealIdx = [];
-        document.querySelectorAll(".modal").forEach(m => m.style.display = "none");
+        document.querySelectorAll(".modal").forEach(m=>m.style.display="none");
         renderVideo();
     }
 </script>
