@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <!-- 手机自适应核心标签 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI反诈小游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #eaffd0 0%, #d6f5ff 100%);
+            color: #2d5a27;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .header {
+            position: absolute;
+            top: 20px;
+            left: 30px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 10;
+        }
+
+        .logo {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 2px solid #8bd450;
+        }
+
+        .brand {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2d5a27;
+        }
+
+        .corner-img {
+            position: absolute;
+            right: 30px;
+            bottom: 30px;
+            width: 360px;
+            height: 360px;
+            object-fit: cover;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .main {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            font-size: 48px;
+            font-weight: 800;
+            color: #1a4d2e;
+            margin-bottom: 12px;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: #4f7d54;
+            margin-bottom: 40px;
+        }
+
+        .start-btn {
+            padding: 16px 48px;
+            font-size: 22px;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(46, 204, 113, 0.4);
+            transition: 0.3s ease;
+        }
+
+        .start-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 24px rgba(46, 204, 113, 0.5);
+        }
+
+        /* 手机适配 */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 32px;
+            }
+            .header {
+                top: 15px;
+                left: 15px;
+            }
+            .corner-img {
+                width: 180px;
+                height: 180px;
+                right: 15px;
+                bottom: 15px;
+            }
+            .start-btn {
+                width: 80%;
+                max-width: 280px;
+                font-size: 20px;
+            }
+            .brand {
+                font-size: 16px;
+            }
+            .logo {
+                width: 36px;
+                height: 36px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="1.jpg" class="logo" alt="logo">
+        <span class="brand">智岭先锋突击队</span>
+    </div>
+
+    <div class="main">
+        <h1>AI反诈小游戏</h1>
+        <p class="subtitle">学会识别 AI 诈骗，守护财产安全</p>
+        <button class="start-btn" onclick="location.href='game.html'">开始游戏</button>
+    </div>
+
+    <img src="21.png" class="corner-img" alt="右下角装饰图">
+</body>
+</html>
