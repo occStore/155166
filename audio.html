@@ -64,6 +64,9 @@
             background: #ffffff;
             border-radius: 12px;
             overflow: hidden;
+            /* 硬件加速优化卡顿 */
+            transform: translateZ(0);
+            will-change: contents;
         }
 
         .choose-btn {
@@ -139,7 +142,7 @@
             background: linear-gradient(135deg, #7f8c8d, #636e70);
             color: white;
         }
-        .restartGame {
+        .restart-btn {
             background: linear-gradient(135deg, #f39c12, #e67e22);
             color: white;
         }
@@ -165,11 +168,11 @@
     <div class="game-container">
         <div class="audio-item">
             <div id="aud1" class="audio-box">暂无音频文件</div>
-            <button class="choose-btn" onclick="checkAnswer(1)">这是AI生成音频</button>
+            <button class="choose-btn" onclick="checkAnswer(1)">音频一是AI音频</button>
         </div>
         <div class="audio-item">
             <div id="aud2" class="audio-box">暂无音频文件</div>
-            <button class="choose-btn" onclick="checkAnswer(2)">真实人声音频</button>
+            <button class="choose-btn" onclick="checkAnswer(2)">音频二是AI音频</button>
         </div>
     </div>
 
@@ -202,14 +205,14 @@
     </div>
 
 <script>
-    // ========== 音频素材数量配置，后续添加修改此处 ==========
-    const AUDIO_AI_COUNT = 0;
-    const AUDIO_REAL_COUNT = 0;
+    // ========== 音频素材数量配置 ==========
+    const AUDIO_AI_COUNT = 1;
+    const AUDIO_REAL_COUNT = 1;
     const AUDIO_SUFFIX = ".mp3";
     const MAX_QUESTION = 3; // 音频一轮3题
     // ======================================================
 
-    // 生成音频数组
+    // 生成音频文件名数组
     const aiAudioList = [];
     const realAudioList = [];
     for(let i = 1; i <= AUDIO_AI_COUNT; i++){
@@ -219,9 +222,12 @@
         realAudioList.push(i + AUDIO_SUFFIX);
     }
 
+    // 音频缓存，解决切换卡顿
+    const audioCache = {};
+
     let usedAiIdx = [];
     let usedRealIdx = [];
-    let currentAns = 0;
+    let targetLeftIsAI = false; // true=左边是AI音频，正确选项1；false=右边是AI，正确选项2
     let questionNum = 0;
     let score = 0;
 
@@ -241,6 +247,16 @@
         return res;
     }
 
+    // 缓存音频工具
+    function getCacheAudioHtml(src) {
+        if (!audioCache[src]) {
+            const tempAudio = new Audio(src);
+            audioCache[src] = true;
+        }
+        // 移除多余文字，只保留audio播放器
+        return `<audio src="${src}" controls preload="auto" muted playsinline onerror="this.parentElement.innerText='音频文件缺失'">`;
+    }
+
     function renderAudio() {
         questionNum++;
         if(aiAudioList.length === 0 || realAudioList.length === 0){
@@ -253,20 +269,23 @@
         let aiSrc = "audio/ai/" + aiAudioList[aiIdx];
         let realSrc = "audio/noai/" + realAudioList[realIdx];
 
-        let isLeftAi = Math.random() > 0.5;
-        if(isLeftAi){
-            currentAns = 1;
-            document.getElementById("aud1").innerHTML = `<p>AI音频</p><audio src="${aiSrc}" controls preload="auto" onerror="this.parentElement.innerText='音频文件缺失'">`;
-            document.getElementById("aud2").innerHTML = `<p>真实音频</p><audio src="${realSrc}" controls preload="auto" onerror="this.parentElement.innerText='音频文件缺失'">`;
+        // 随机AI音频在左/右
+        targetLeftIsAI = Math.random() > 0.5;
+        if(targetLeftIsAI){
+            // 左AI，右真实
+            document.getElementById("aud1").innerHTML = getCacheAudioHtml(aiSrc);
+            document.getElementById("aud2").innerHTML = getCacheAudioHtml(realSrc);
         }else{
-            currentAns = 2;
-            document.getElementById("aud1").innerHTML = `<p>真实音频</p><audio src="${realSrc}" controls preload="auto" onerror="this.parentElement.innerText='音频文件缺失'">`;
-            document.getElementById("aud2").innerHTML = `<p>AI音频</p><audio src="${aiSrc}" controls preload="auto" onerror="this.parentElement.innerText='音频文件缺失'">`;
+            // 左真实，右AI
+            document.getElementById("aud1").innerHTML = getCacheAudioHtml(realSrc);
+            document.getElementById("aud2").innerHTML = getCacheAudioHtml(aiSrc);
         }
     }
 
+    // 判断答案：1=音频一是AI，2=音频二是AI
     function checkAnswer(select) {
-        if(select === currentAns){
+        const correctOption = targetLeftIsAI ? 1 : 2;
+        if(select === correctOption){
             score++;
             document.getElementById("correctModal").style.display = "flex";
         }else{
