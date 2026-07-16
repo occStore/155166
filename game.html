@@ -212,7 +212,7 @@
     <div id="correctModal" class="modal">
         <div class="modal-content">
             <h2>✅ 恭喜你，回答正确！</h2>
-            <div class="modal-img"><img src="5.png"></div>
+            <div class="modal-img"><img src="5.jpg"></div>
             <button class="modal-btn next-btn" onclick="nextQuestion()">下一题</button>
         </div>
     </div>
@@ -220,7 +220,7 @@
     <div id="wrongModal" class="modal">
         <div class="modal-content">
             <h2>❌ 回答错误，请再试试！</h2>
-            <div class="modal-img"><img src="6.png"></div>
+            <div class="modal-img"><img src="6.jpg"></div>
             <button class="modal-btn next-btn" onclick="nextQuestion()">下一题</button>
         </div>
     </div>
@@ -235,11 +235,11 @@
     </div>
 
 <script>
-    // ========== 图片配置：全部改为png ==========
+    // ========== 图片配置：全部改为jpg ==========
     const AI_COUNT = 25;
-    const AI_SUFFIX = ".png";
+    const AI_SUFFIX = ".jpg";
     const NOAI_COUNT = 25;
-    const NOAI_SUFFIX = ".png";
+    const NOAI_SUFFIX = ".jpg";
     const MAX_QUESTION = 5;
     // ==========================================================
 
@@ -248,9 +248,9 @@
     for(let i = 1; i <= AI_COUNT; i++) aiImages.push(i + AI_SUFFIX);
     for(let i = 1; i <= NOAI_COUNT; i++) realImages.push(i + NOAI_SUFFIX);
 
-    // 本地全局永久缓存，只读取一次磁盘文件
+    // 全局永久图片缓存，线上不重复请求网络
     const imageCache = new Map();
-    // 预加载下一题地址缓存
+    // 预加载下一题缓存
     let nextImagePair = null;
 
     let usedAIIndices = [];
@@ -261,7 +261,7 @@
 
     window.addEventListener('DOMContentLoaded', async () => {
         await generateQuestion();
-        // 当前题目渲染完，空闲时预加载下一题图片
+        // 当前题目渲染完成，后台预加载下一题图片
         preloadNextImages();
     });
 
@@ -279,7 +279,7 @@
         return selectIdx;
     }
 
-    // 本地加载图片，缓存复用，不重复读磁盘
+    // 加载图片，命中缓存直接返回，不发起网络请求
     function loadImage(src) {
         return new Promise((resolve, reject) => {
             if(imageCache.has(src)) {
@@ -297,7 +297,7 @@
         });
     }
 
-    // 预加载下一题，弹窗等待间隙后台读取图片
+    // 弹窗间隙后台预加载下一组图片，切换题目无等待
     async function preloadNextImages() {
         if(questionCount >= MAX_QUESTION) return;
         const aiIndex = getUnusedIndex(aiImages.length, [...usedAIIndices]);
@@ -310,11 +310,11 @@
             right: isLeftAI ? realSrc : aiSrc,
             ans: isLeftAI ? 1 : 2
         };
-        // 后台静默加载，不阻塞页面
+        // 静默后台加载，不阻塞页面交互
         Promise.all([loadImage(nextImagePair.left), loadImage(nextImagePair.right)]);
     }
 
-    // 渲染单张图容器
+    // 渲染图片容器，显示骨架加载动画
     async function renderBox(boxId, src) {
         const box = document.getElementById(boxId);
         box.classList.add("loading");
@@ -331,7 +331,7 @@
         }
     }
 
-    // 生成题目，优先使用预加载缓存
+    // 生成题目，优先复用预加载缓存图片
     async function generateQuestion() {
         questionCount++;
         if(!aiImages.length || !realImages.length){
@@ -340,7 +340,7 @@
             return;
         }
 
-        // 存在预加载数据直接复用，跳过读取磁盘
+        // 有预加载数据直接使用，无需重新下载
         if(nextImagePair) {
             currentAnswer = nextImagePair.ans;
             await Promise.all([
@@ -351,7 +351,7 @@
             return;
         }
 
-        // 无预加载则现场加载
+        // 无预加载则现场并行加载两张图
         const aiIndex = getUnusedIndex(aiImages.length, usedAIIndices);
         const realIndex = getUnusedIndex(realImages.length, usedRealIndices);
         const aiSrc = "ai/" + aiImages[aiIndex];
@@ -367,6 +367,7 @@
         }
     }
 
+    // 选择答案弹窗逻辑
     function checkAnswer(choose) {
         if (choose === currentAnswer) {
             score++;
@@ -376,6 +377,7 @@
         }
     }
 
+    // 切换下一题
     async function nextQuestion() {
         document.querySelectorAll(".modal").forEach(m => m.style.display = "none");
         if (questionCount >= MAX_QUESTION) {
@@ -384,10 +386,10 @@
             return;
         }
         await generateQuestion();
-        // 加载完成后继续预缓存下一组
         preloadNextImages();
     }
 
+    // 重新开局重置数据
     async function restartGame() {
         questionCount = 0;
         score = 0;
