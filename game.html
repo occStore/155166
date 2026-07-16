@@ -62,12 +62,11 @@
             background: #f8ffe8;
             border-radius: 12px;
             overflow: hidden;
-            /* 硬件加速，分离渲染层 */
             transform: translateZ(0);
-            will-change: transform;
+            will-change: opacity;
             position: relative;
         }
-        /* 骨架占位 */
+        /* 骨架加载动画 */
         .img-box::after {
             content: "";
             position: absolute;
@@ -89,7 +88,8 @@
             height: 100%;
             object-fit: cover;
             opacity: 0;
-            transition: opacity 0.4s ease;
+            transition: opacity 0.3s ease;
+            decoding: async;
         }
         .img-box img.loaded {
             opacity: 1;
@@ -151,6 +151,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            decoding: async;
         }
 
         .modal-btn {
@@ -211,7 +212,7 @@
     <div id="correctModal" class="modal">
         <div class="modal-content">
             <h2>✅ 恭喜你，回答正确！</h2>
-            <div class="modal-img"><img src="5.png" loading="lazy"></div>
+            <div class="modal-img"><img src="5.png"></div>
             <button class="modal-btn next-btn" onclick="nextQuestion()">下一题</button>
         </div>
     </div>
@@ -219,7 +220,7 @@
     <div id="wrongModal" class="modal">
         <div class="modal-content">
             <h2>❌ 回答错误，请再试试！</h2>
-            <div class="modal-img"><img src="6.png" loading="lazy"></div>
+            <div class="modal-img"><img src="6.png"></div>
             <button class="modal-btn next-btn" onclick="nextQuestion()">下一题</button>
         </div>
     </div>
@@ -234,7 +235,7 @@
     </div>
 
 <script>
-    // ========== 图片数量配置 ==========
+    // ========== 图片配置：全部改为png ==========
     const AI_COUNT = 25;
     const AI_SUFFIX = ".png";
     const NOAI_COUNT = 25;
@@ -247,8 +248,10 @@
     for(let i = 1; i <= AI_COUNT; i++) aiImages.push(i + AI_SUFFIX);
     for(let i = 1; i <= NOAI_COUNT; i++) realImages.push(i + NOAI_SUFFIX);
 
-    // 核心缓存：存储Image实例，复用不重复请求
+    // 本地全局永久缓存，只读取一次磁盘文件
     const imageCache = new Map();
+    // 预加载下一题地址缓存
+    let nextImagePair = null;
 
     let usedAIIndices = [];
     let usedRealIndices = [];
@@ -256,7 +259,11 @@
     let questionCount = 0;
     let score = 0;
 
-    window.addEventListener('DOMContentLoaded', generateQuestion);
+    window.addEventListener('DOMContentLoaded', async () => {
+        await generateQuestion();
+        // 当前题目渲染完，空闲时预加载下一题图片
+        preloadNextImages();
+    });
 
     // 获取未使用随机下标
     function getUnusedIndex(totalCount, usedIndices) {
@@ -272,7 +279,7 @@
         return selectIdx;
     }
 
-    // 预加载图片，返回Promise，缓存Image对象
+    // 本地加载图片，缓存复用，不重复读磁盘
     function loadImage(src) {
         return new Promise((resolve, reject) => {
             if(imageCache.has(src)) {
@@ -280,18 +287,34 @@
                 return;
             }
             const img = new Image();
-            img.loading = "lazy";
-            img.decoding = "async"; // 异步解码，不阻塞页面
+            img.decoding = "async";
             img.onload = () => {
                 imageCache.set(src, img);
                 resolve(img);
             };
-            img.onerror = () => reject(`图片缺失: ${src}`);
+            img.onerror = () => reject(`缺失：${src}`);
             img.src = src;
         });
     }
 
-    // 渲染单个图片容器
+    // 预加载下一题，弹窗等待间隙后台读取图片
+    async function preloadNextImages() {
+        if(questionCount >= MAX_QUESTION) return;
+        const aiIndex = getUnusedIndex(aiImages.length, [...usedAIIndices]);
+        const realIndex = getUnusedIndex(realImages.length, [...usedRealIndices]);
+        const aiSrc = "ai/" + aiImages[aiIndex];
+        const realSrc = "noai/" + realImages[realIndex];
+        const isLeftAI = Math.random() > 0.5;
+        nextImagePair = {
+            left: isLeftAI ? aiSrc : realSrc,
+            right: isLeftAI ? realSrc : aiSrc,
+            ans: isLeftAI ? 1 : 2
+        };
+        // 后台静默加载，不阻塞页面
+        Promise.all([loadImage(nextImagePair.left), loadImage(nextImagePair.right)]);
+    }
+
+    // 渲染单张图容器
     async function renderBox(boxId, src) {
         const box = document.getElementById(boxId);
         box.classList.add("loading");
@@ -308,7 +331,7 @@
         }
     }
 
-    // 生成题目（并行加载两张图，速度翻倍）
+    // 生成题目，优先使用预加载缓存
     async function generateQuestion() {
         questionCount++;
         if(!aiImages.length || !realImages.length){
@@ -316,31 +339,34 @@
             document.getElementById("img2").innerText = "noai文件夹缺少图片文件";
             return;
         }
+
+        // 存在预加载数据直接复用，跳过读取磁盘
+        if(nextImagePair) {
+            currentAnswer = nextImagePair.ans;
+            await Promise.all([
+                renderBox("img1", nextImagePair.left),
+                renderBox("img2", nextImagePair.right)
+            ]);
+            nextImagePair = null;
+            return;
+        }
+
+        // 无预加载则现场加载
         const aiIndex = getUnusedIndex(aiImages.length, usedAIIndices);
         const realIndex = getUnusedIndex(realImages.length, usedRealIndices);
         const aiSrc = "ai/" + aiImages[aiIndex];
         const realSrc = "noai/" + realImages[realIndex];
 
         const isLeftAI = Math.random() > 0.5;
-        let leftSrc, rightSrc;
         if (isLeftAI) {
             currentAnswer = 1;
-            leftSrc = aiSrc;
-            rightSrc = realSrc;
+            await Promise.all([renderBox("img1", aiSrc), renderBox("img2", realSrc)]);
         } else {
             currentAnswer = 2;
-            leftSrc = realSrc;
-            rightSrc = aiSrc;
+            await Promise.all([renderBox("img1", realSrc), renderBox("img2", aiSrc)]);
         }
-
-        // 两张图片并行加载
-        await Promise.all([
-            renderBox("img1", leftSrc),
-            renderBox("img2", rightSrc)
-        ]);
     }
 
-    // 选择答案
     function checkAnswer(choose) {
         if (choose === currentAnswer) {
             score++;
@@ -350,25 +376,27 @@
         }
     }
 
-    // 下一题
-    function nextQuestion() {
+    async function nextQuestion() {
         document.querySelectorAll(".modal").forEach(m => m.style.display = "none");
         if (questionCount >= MAX_QUESTION) {
             document.getElementById("scoreText").innerText = `一共${MAX_QUESTION}题，答对${score}题，得${score}分`;
             document.getElementById("resultModal").style.display = "flex";
             return;
         }
-        generateQuestion();
+        await generateQuestion();
+        // 加载完成后继续预缓存下一组
+        preloadNextImages();
     }
 
-    // 重新开局
-    function restartGame() {
+    async function restartGame() {
         questionCount = 0;
         score = 0;
         usedAIIndices = [];
         usedRealIndices = [];
+        nextImagePair = null;
         document.querySelectorAll(".modal").forEach(m => m.style.display = "none");
-        generateQuestion();
+        await generateQuestion();
+        preloadNextImages();
     }
 </script>
 </body>
